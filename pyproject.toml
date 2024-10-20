@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling","hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dagtor"
+dynamic = ["version"]
+description = 'Python based orchestrator for DAGs'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "n.michail", email = "n.michail@kaizengaming.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pre-commit",
+]
+
+[project.urls]
+Documentation = "https://github.com/n.michail/dagtor#readme"
+Issues = "https://github.com/n.michail/dagtor/issues"
+Source = "https://github.com/n.michail/dagtor"
+
+[tool.hatch.envs.default]
+python = "3.9" # Matching DataBricks Runtime 13.3-LTS
+
+[tool.hatch.envs.dev]
+description = "Custom env that is used for development"
+features = ["dev"]
+post-install-commands = ["pre-commit install"]
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"
+
+[tool.hatch.metadata.hooks.vcs]
+
+[tool.hatch.envs.hatch-static-analysis]
+config-path = "none"
+
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.9"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
