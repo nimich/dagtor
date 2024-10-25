@@ -2,10 +2,11 @@ import psycopg
 
 
 class Client:
-    def __init__(self):
+    def __init__(self, connector_config):
+        print(connector_config)
         try:
             self.conn = psycopg.connect(
-                "dbname=dagtor user=postgres port=8080 password=example"
+                "host=localhost dbname=dagtor user=postgres port=5432 password=example"
             )
             print("Connection established")
         except psycopg.OperationalError as e:

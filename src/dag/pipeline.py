@@ -8,7 +8,7 @@ class Pipeline:
     def __init__(self, name: str, tasks: List[Task]):
         self.name = name
         self.tasks = tasks
-        self.client = Client()
+        self.client = Client({})
         self.parallelism = 10
 
     def pprint(self):
