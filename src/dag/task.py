@@ -1,3 +1,7 @@
+import time
+import random
+
+
 class Task:
     def __init__(
         self,
@@ -15,6 +19,9 @@ class Task:
 
     def run(self):
         print(f"Executing task {self.name}")
+        duration = random.randint(1, 2)
+        time.sleep(duration)
+        print(f"Duration of {self.name} was {duration} sec")
         self.execution_status = "SUCCEDED"
         return self.execution_status
 

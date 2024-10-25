@@ -8,5 +8,5 @@ if __name__ == "__main__":
     ingestion_pipeline.pprint()
     ingestion_pipeline.execute()
 
-    print(" ---------- ")
-    ingestion_pipeline.execute_serially()
+    # print(" ---------- ")
+    # ingestion_pipeline.execute_serially()

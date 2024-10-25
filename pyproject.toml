@@ -24,7 +24,11 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = [] #Add dependencies here
+
+dependencies = [
+  "podman-compose",
+  "psycopg[binary,pool]"
+] #Add dependencies here
 
 [project.optional-dependencies]
 dev = [
