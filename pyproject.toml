@@ -27,7 +27,8 @@ classifiers = [
 
 dependencies = [
   "podman-compose",
-  "psycopg[binary,pool]"
+  "psycopg[binary,pool]",
+  "returns"
 ] #Add dependencies here
 
 [project.optional-dependencies]

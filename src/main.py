@@ -1,7 +1,12 @@
-from dag import Pipeline, Task
+from dag import Pipeline
+from dag.notebook_task import NotebookTask
 
 if __name__ == "__main__":
-    execution_tasks = [Task("task1"), Task("task2"), Task("task3")]
+    execution_tasks = [
+        NotebookTask("task1"),
+        NotebookTask("task2"),
+        NotebookTask("task3"),
+    ]
     ingestion_pipeline = Pipeline("ingestion", execution_tasks)
 
     ingestion_pipeline.register()

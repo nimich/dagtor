@@ -1,4 +1,4 @@
 from .pipeline import Pipeline
-from .task import Task
+from .notebook_task import NotebookTask
 
-__all__ = ["Pipeline", "Task"]
+__all__ = ["Pipeline", "NotebookTask"]

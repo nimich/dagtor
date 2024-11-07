@@ -1,11 +1,11 @@
 from state import Client
-from .task import Task
+from .notebook_task import NotebookTask
 from typing import List
 import concurrent.futures
 
 
 class Pipeline:
-    def __init__(self, name: str, tasks: List[Task]):
+    def __init__(self, name: str, tasks: List[NotebookTask]):
         self.name = name
         self.tasks = tasks
         self.client = Client({})
