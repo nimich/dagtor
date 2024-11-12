@@ -1,5 +1,6 @@
 from dag import Pipeline
 from dag.notebook_task import NotebookTask
+from state.client import Client
 
 if __name__ == "__main__":
     execution_tasks = [
@@ -7,10 +8,12 @@ if __name__ == "__main__":
         NotebookTask("task2"),
         NotebookTask("task3"),
     ]
-    ingestion_pipeline = Pipeline("ingestion", execution_tasks)
+    ingestion_pipeline = Pipeline(
+        name="ingestion", tasks=execution_tasks, state_client=Client({}), looger=""
+    )
 
     ingestion_pipeline.register()
     ingestion_pipeline.pprint()
-    ingestion_pipeline.execute()
+    ingestion_pipeline.execute_pipeline()
 
     # ingestion_pipeline.execute_serially()

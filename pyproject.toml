@@ -26,13 +26,14 @@ classifiers = [
 ]
 
 dependencies = [
+  "returns",
   "podman-compose",
-  "psycopg[binary,pool]",
-  "returns"
+  "psycopg[binary,pool]"
 ] #Add dependencies here
 
 [project.optional-dependencies]
 dev = [
+    "returns",
     "pytest",
     "pytest-cov",
     "pytest-mock",
@@ -46,6 +47,8 @@ Source = "https://github.com/n.michail/dagtor"
 
 [tool.hatch.envs.default]
 python = "3.9"
+type = "virtual" #This creates a local .venv virtual folder that I can use in Pycharm
+path = ".venv"
 
 [tool.hatch.envs.dev]
 python = "3.9" 

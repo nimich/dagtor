@@ -1,6 +1,7 @@
 import psycopg
 
 
+# TODO make this a protocol
 class Client:
     def __init__(self, connector_config):
         print(connector_config)

@@ -1,4 +1,5 @@
 install-dev:
+	brew install hatch
 	hatch env create dev
 
 dev:
