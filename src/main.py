@@ -9,10 +9,9 @@ if __name__ == "__main__":
         NotebookTask("task3"),
     ]
     ingestion_pipeline = Pipeline(
-        name="ingestion", tasks=execution_tasks, state_client=Client({}), looger=""
+        name="ingestion", tasks=execution_tasks, state_client=Client(), logger=""
     )
 
-    ingestion_pipeline.register()
     ingestion_pipeline.pprint()
     ingestion_pipeline.execute_pipeline()
 

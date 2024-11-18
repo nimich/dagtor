@@ -1,10 +1,19 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass
 class Pipeline:
-    id: id
-    name: str
+    pipeline_id: int
+    pipeline_name: str
+
+
+@dataclass
+class PipelineExecution:
+    execution_id: int
     state: str
-    started: str
-    ended: str
+    started: datetime
+    ended: datetime
+    parallelism: int
+    retry_times: int
+    retry_policy: str

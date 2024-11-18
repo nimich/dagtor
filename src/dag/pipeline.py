@@ -4,24 +4,26 @@ import concurrent.futures
 from .task import Task, ExecutionState
 from state.client import Client
 
+from datetime import datetime
+
 
 class Pipeline:
-    def __init__(self, name: str, tasks: List[Task], state_client: Client, looger):
+    def __init__(self, name: str, tasks: List[Task], state_client: Client, logger):
         self.name = name
         self.tasks = tasks
         self.client = state_client
         self.parallelism = 10
-        self.retry_times = 5
+        self.retry_max = 5
+        self.retry_current = 0
         self.retry_policy = "ONLY_FAILED"
 
-    pipeline_state = ExecutionState.SUBMITTED
-    failed_tasks = set()
+    pipeline_state: ExecutionState = ExecutionState.SUBMITTED
+    started: datetime = None
+    ended: datetime = None
+    failed_tasks: set[Task] = set()
 
     def pprint(self):
         print("->".join([x.name for x in self.tasks]))
-
-    def register(self) -> int:
-        return self.client.register_pipeline(self.name)
 
     """
     This function should use the client to externalize the state to a persistent storage 
@@ -31,12 +33,18 @@ class Pipeline:
         pass
 
     def execute_pipeline(self):
+        pipeline_id = self.client.register_pipeline(self.name)
+        execution_id = self.client.register_pipeline_execution()
+        print(pipeline_id, execution_id)
+
+        # todo register tasks and get failed tasks from state
         all_tasks = self.tasks
         failed_tasks = self._execute_tasks_concurrently(all_tasks)
 
         if failed_tasks:
-            for retry in range(1, self.retry_times + 1):
-                print(f"\nRetrying {retry}\n")  # Retry only failed tasks
+            for retry_number in range(1, self.retry_max + 1):
+                self.retry_current = retry_number
+                print(f"\nRetrying {retry_number}\n")  # Retry only failed tasks
                 failed_tasks = self._execute_tasks_concurrently(failed_tasks)
                 if not failed_tasks:
                     break
@@ -69,8 +77,3 @@ class Pipeline:
                 failed_tasks.append(task)
 
         return failed_tasks
-
-    def execute_serially(self):
-        for task in self.tasks:
-            result = task.run()
-            print(f"{task.name} ended with: {result}")
