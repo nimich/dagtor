@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from psycopg.rows import class_row
-from src.state.client import Client
+from state.client import Client
 
 
 class TestRegisterPipeline(unittest.TestCase):

@@ -3,6 +3,7 @@ import concurrent.futures
 
 from .task import Task, ExecutionState
 from state.client import Client
+from state.data import PipelineExecution
 
 from datetime import datetime
 
@@ -33,9 +34,25 @@ class Pipeline:
         pass
 
     def execute_pipeline(self):
+        # Register the pipeline or retrieve the pid
         pipeline_id = self.client.register_pipeline(self.name)
-        execution_id = self.client.register_pipeline_execution()
-        print(pipeline_id, execution_id)
+
+        # Check if pipeline execution exists
+        if not self.client.exists_pipeline_execution(pipeline_id):
+            pe = PipelineExecution(
+                pipeline_id=pipeline_id,
+                execution_id=0,  # TODO optional
+                state="RUNNING",
+                started=datetime.now(),
+                ended=None,  # TODO optional
+                parallelism=self.parallelism,
+                retry_times=self.retry_current,
+                retry_policy=self.retry_policy,
+            )
+            self.client.register_pipeline_execution(pe)
+
+        pipeline_execution = self.client.get_pipeline_execution(pipeline_id)
+        print(f"Starting pipeline execution with {pipeline_execution.execution_id}")
 
         # todo register tasks and get failed tasks from state
         all_tasks = self.tasks
@@ -49,12 +66,18 @@ class Pipeline:
                 if not failed_tasks:
                     break
 
-        # Update the failed_tasks attribute and decide next steps
+        pipeline_execution.ended = datetime.now()
+        pipeline_execution.retry_times = self.retry_current
+
         if not failed_tasks:
             print("Pipeline executed successfully!")
+            pipeline_execution.state = ExecutionState.SUCCESS.name
+            self.client.update_pipeline_execution(pipeline_execution)
             return True
         else:
             print(f"Pipeline failed: {failed_tasks}")
+            pipeline_execution.state = ExecutionState.FAILURE.name
+            self.client.update_pipeline_execution(pipeline_execution)
             return False
 
     # Should return a Future of Pipeline execution status

@@ -11,6 +11,7 @@ class Pipeline:
 @dataclass
 class PipelineExecution:
     execution_id: int
+    pipeline_id: int
     state: str
     started: datetime
     ended: datetime
