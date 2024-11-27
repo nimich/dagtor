@@ -18,3 +18,14 @@ class PipelineExecution:
     parallelism: int
     retry_times: int
     retry_policy: str
+
+
+@dataclass
+class TaskExecution:
+    pipeline_id: int
+    pipeline_execution_id: int
+    id: int
+    name: str
+    state: str
+    started: datetime
+    ended: datetime

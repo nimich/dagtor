@@ -22,6 +22,8 @@ Abstract Base class for Tasks
 class Task(Protocol):
     """ """
 
+    depends_on: set
+    triggers: set
     name: str = ""
 
     """
@@ -37,5 +39,5 @@ class Task(Protocol):
         pass
 
     @abstractmethod
-    def has_dependency(self) -> bool:
+    def dependencies_ended(self) -> bool:
         pass
