@@ -1,6 +1,9 @@
 from dag import Pipeline
+from state.data import TaskExecution
+from datetime import datetime
 from dag.notebook_task import NotebookTask
 from state.client import Client
+from state.client import exists_running_task_execution
 import sys
 
 if __name__ == "__main__":
@@ -9,11 +12,12 @@ if __name__ == "__main__":
 
     state_client = Client()
 
-    # task_execution = TaskExecution(3,90,0,"test","RUNNING",datetime.now(),None)
-    # #state_client.create_task_execution(task_execution)
-    # te = state_client.get_task_execution(3,90, "test2")
-    # # pe = state_client.get_pipeline_execution(3)
-    # print(te)
+    task_execution = TaskExecution(3, 90, 0, "test", "RUNNING", datetime.now(), None)
+    # state_client.create_task_execution(task_execution)
+    te = state_client.get_task_execution(3, 90, "test3")
+    # pe = state_client.get_pipeline_execution(3)
+    print(exists_running_task_execution(te))
+    print(te)
 
     # sys.exit(0)
     task_1 = NotebookTask(name="task1")

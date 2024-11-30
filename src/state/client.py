@@ -2,12 +2,19 @@ import psycopg
 from psycopg.rows import class_row, dict_row
 from .data import Pipeline, PipelineExecution, TaskExecution
 from typing import Optional
+from returns.maybe import Maybe, maybe
 
 
 # TODO make this a protocol
 # register
 # get/update pipeline execution
 # get/update tasks execution
+
+
+def exists_running_task_execution(task: Maybe[TaskExecution]) -> bool:
+    return task.bind_optional(lambda t: t.state == "RUNNING").value_or(False)
+
+
 class Client:
     def __init__(self):
         self.client_context = (
@@ -135,24 +142,6 @@ class Client:
             conn.execute(query)
             conn.commit()
 
-    def exists_task_execution(
-        self, pipeline_id: int, execution_id: int, task_name: str
-    ) -> bool:
-        with psycopg.connect(self.client_context) as conn:
-            row_factory = conn.cursor(row_factory=dict_row)
-            select_query = f"""
-                SELECT EXISTS (
-                    SELECT 1  
-                    from state.task_execution
-                    WHERE pipeline_id = '{pipeline_id}' 
-                     AND execution_id = '{execution_id}'
-                     AND task_name = '{task_name}'
-                     AND state IN  ('RUNNING')
-                    )
-            """
-            row = row_factory.execute(select_query).fetchone()
-            return row.get("exists")
-
     def create_task_execution(self, te: TaskExecution):
         with psycopg.connect(self.client_context) as conn:
             query = """
@@ -171,6 +160,7 @@ class Client:
             conn.execute(query, params)
             conn.commit()
 
+    @maybe
     def get_task_execution(
         self, pipeline_id: int, execution_id: int, task_name: str
     ) -> Optional[TaskExecution]:
@@ -185,9 +175,3 @@ class Client:
               """  # TODO select fields
             row = row_factory.execute(select_query).fetchone()
             return row
-
-    # def exists_task_execution2(self,
-    #                               pipeline_id: int,
-    #                               execution_id: int,
-    #                               task_name: str) -> bool:
-    #     self.get_task_execution(pipeline_id,execution_id,task_name).

@@ -29,6 +29,8 @@ class Task(Protocol):
     """
     Any task should execute something 
     """
+    # TODO ADD MEMEBERS
+    # TODO ADD RENDER FUNACTION FOR HTML
 
     @abstractmethod
     def run(self) -> ExecutionState:

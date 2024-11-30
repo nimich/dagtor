@@ -18,12 +18,51 @@ class Pipeline:
         self.retry_current = 0
         self.retry_policy = "ONLY_FAILED"
 
+        # TODO no side effects in constructor
+        # add default NONE for all variables
+        self.pipeline_id = state_client.register_pipeline(self.name)
+        if not self.client.exists_pipeline_execution(self.pipeline_id):
+            pe = PipelineExecution(
+                pipeline_id=self.pipeline_id,
+                execution_id=0,  # TODO optional
+                state="RUNNING",
+                started=datetime.now(),
+                ended=None,  # TODO optional
+                parallelism=self.parallelism,
+                retry_times=self.retry_current,
+                retry_policy=self.retry_policy,
+            )
+            self.client.register_pipeline_execution(pe)
+        self.pipeline_execution = self.client.get_pipeline_execution(self.pipeline_id)
+
     pipeline_state: ExecutionState = ExecutionState.SUBMITTED
+    # Register the pipeline or retrieve the pid
     started: datetime = None
     ended: datetime = None
     failed_tasks: set[Task] = set()
 
     execution_list = set()
+
+    #     def persist_task_state(self, pipeline_id: int, execution_id: int, task_name: str):
+    #         optionalte = self.client.get_task_execution(
+    #             pipeline_id= pipeline_id,
+    #             execution_id= execution_id,
+    #             task_name= task_name
+    #             )
+    #         if not exists_running_task_execution(optionalte):
+    # =            pipeline_execution_id: int
+    #             id: int
+    #             name: str
+    #             state: str
+    #             started: datetime
+    #             ended: datetime
+    #             nte = TaskExecution(
+    #                 pipeline_id=self.pipeline_id,
+    #                 pipeline_execution_id=
+    #
+    #             )
+    #             self.client.create_task_execution()
+    #         else:
 
     def print_trigger(self):
         print(f"Initial execution {[t.name for t in self.execution_list]}")
@@ -31,6 +70,7 @@ class Pipeline:
             for tr in t.triggers:
                 print(f"{t.name} triggers {tr.name}")
 
+    # TODO add this in execute
     def create_execution_order(self):
         # todo reurn error for cycles
         for task in self.tasks:
@@ -51,24 +91,7 @@ class Pipeline:
         pass
 
     def execute_pipeline(self):
-        # Register the pipeline or retrieve the pid
-        pipeline_id = self.client.register_pipeline(self.name)
-
-        # Check if pipeline execution exists
-        if not self.client.exists_pipeline_execution(pipeline_id):
-            pe = PipelineExecution(
-                pipeline_id=pipeline_id,
-                execution_id=0,  # TODO optional
-                state="RUNNING",
-                started=datetime.now(),
-                ended=None,  # TODO optional
-                parallelism=self.parallelism,
-                retry_times=self.retry_current,
-                retry_policy=self.retry_policy,
-            )
-            self.client.register_pipeline_execution(pe)
-
-        pipeline_execution = self.client.get_pipeline_execution(pipeline_id)
+        pipeline_execution = self.pipeline_execution
         print(f"\nStarting pipeline execution with {pipeline_execution.execution_id}")
 
         # todo register tasks and get failed tasks from state
@@ -100,7 +123,7 @@ class Pipeline:
             return False
 
     # Should return a Future of Pipeline execution status
-    # use async thread pool with concurrency here
+    # can async thread pool for concurrency here
     def _execute_tasks_concurrently(self, concurrent_tasks: set[Task]) -> set[Task]:
         failed_tasks = set()
 
@@ -129,7 +152,9 @@ class Pipeline:
 
         try:
             execution_futures = {
-                executor.submit(task.run): task for task in concurrent_tasks
+                executor.submit(task.run): task
+                for task in concurrent_tasks
+                # todo instead of run use run with state
             }
 
             while execution_futures:
@@ -143,10 +168,12 @@ class Pipeline:
                     if not task.is_successful():  # todo inverse cases
                         failed_tasks.add(task)
                         task.execution_state = ExecutionState.FAILURE
+                        # todo update state
                     else:
                         # At successful completion successful check if we can trigger
                         # another task
                         task.execution_state = ExecutionState.SUCCESS
+                        # todo update state
                         triggers = task.triggers
                         for trigger in triggers:
                             if trigger not in self.execution_list:
