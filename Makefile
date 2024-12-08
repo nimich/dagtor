@@ -15,3 +15,6 @@ up:
 down:
 	podman compose down
 	podman machine stop podman-machine-default
+
+test:
+	python -m pytest src/test/*

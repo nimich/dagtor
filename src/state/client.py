@@ -1,8 +1,10 @@
 import psycopg
-from psycopg.rows import class_row, dict_row
+from psycopg.rows import class_row
 from .data import Pipeline, PipelineExecution, TaskExecution
 from typing import Optional
 from returns.maybe import Maybe, maybe
+from src.logger import logger
+from datetime import datetime
 
 
 # TODO make this a protocol
@@ -12,7 +14,21 @@ from returns.maybe import Maybe, maybe
 
 
 def exists_running_task_execution(task: Maybe[TaskExecution]) -> bool:
+    """
+
+    :param task:
+    :return:
+    """
     return task.bind_optional(lambda t: t.state == "RUNNING").value_or(False)
+
+
+def exists_running_pipeline_execution(pipeline: Maybe[PipelineExecution]) -> bool:
+    """
+
+    :param pipeline:
+    :return:
+    """
+    return pipeline.value_or(False)
 
 
 class Client:
@@ -23,21 +39,25 @@ class Client:
         self._create_schema()
 
     def _create_schema(self):
+        """
+
+        :return:
+        """
         schema_creation_queries = [
             """
             CREATE SCHEMA IF NOT EXISTS state
             """,
             """
             CREATE TABLE IF NOT EXISTS state.pipeline (
-                pipeline_id SERIAL PRIMARY KEY,
-                pipeline_name VARCHAR(255) NOT NULL
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL
             )
             """,
             # todo change execution id to id
             """
             CREATE TABLE IF NOT EXISTS state.pipeline_execution (
                 execution_id SERIAL PRIMARY KEY, 
-                pipeline_id integer REFERENCES state.pipeline(pipeline_id),
+                pipeline_id integer REFERENCES state.pipeline(id),
                 state TEXT NOT NULL,
                 started TIMESTAMP NOT NULL,
                 ended TIMESTAMP NULL,
@@ -50,7 +70,7 @@ class Client:
             CREATE TABLE IF NOT EXISTS state.task_execution(
                 pipeline_id integer REFERENCES state.pipeline(pipeline_id),
                 pipeline_execution_id integer REFERENCES state.pipeline_execution(execution_id),
-                id SERIAL PRIMARY KEY,
+                task_id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 state TEXT NOT NULL,
                 started TIMESTAMP NOT NULL,
@@ -64,38 +84,56 @@ class Client:
                 conn.execute(q)
             conn.commit()
 
-    def register_pipeline(self, pipeline_name: str) -> int:
+    """
+    *****************************
+    ********* Pipeline  *********
+    *****************************
+    """
+
+    def get_or_create_pipeline(self, name: str) -> int:
         with psycopg.connect(self.client_context) as conn:
             row_factory = conn.cursor(row_factory=class_row(Pipeline))
-            select_query = f"select pipeline_id,pipeline_name from state.pipeline WHERE pipeline_name = '{pipeline_name}'"
-            print(select_query)
+            select_query = f"select id, name from state.pipeline WHERE name = '{name}'"
             row = row_factory.execute(select_query).fetchone()
             if row is None:
-                conn.execute(
-                    "INSERT INTO state.pipeline (pipeline_name) VALUES('ingestion')"
-                )
+                conn.execute("INSERT INTO state.pipeline (name) VALUES('ingestion')")
                 conn.commit()
                 row = row_factory.execute(select_query).fetchone()
 
-        registered_id = row.pipeline_id  # emulate registration with id -> 0
-        print(f"{pipeline_name} is registered with id {registered_id}")  # todo logger
-        return registered_id
+        logger.info(f"{name} is registered with id {row.id}")
+        return row.id
 
-    # Use get pipeline execution?
-    def exists_pipeline_execution(self, pipeline_id: int) -> bool:
+    """
+    *****************************
+    **** Pipeline execution  ****
+    *****************************
+    """
+
+    def get_running_pipeline_execution(
+        self, pipeline_id: int
+    ) -> Optional[PipelineExecution]:
         with psycopg.connect(self.client_context) as conn:
-            row_factory = conn.cursor(row_factory=dict_row)
+            row_factory = conn.cursor(
+                row_factory=class_row(PipelineExecution)
+            )  # TODO state can be argument
             select_query = f"""
-                SELECT EXISTS (
-                    SELECT 1  
-                    from state.pipeline_execution
-                    WHERE pipeline_id = '{pipeline_id}' AND state IN  ('RUNNING')
-                    )
-            """
+                  SELECT *
+                      FROM state.pipeline_execution 
+                      WHERE pipeline_id = {pipeline_id} AND state = 'RUNNING'
+              """
             row = row_factory.execute(select_query).fetchone()
-            return row.get("exists")
+            return row
 
-    def register_pipeline_execution(self, pe: PipelineExecution):
+    def create_pipeline_execution(
+        self,
+        pipeline_id: int,
+        state: str,
+        started: datetime,
+        ended: datetime,
+        parallelism: int,
+        retry_times: int,
+        retry_policy: str,
+    ):
         with psycopg.connect(self.client_context) as conn:
             query = """
                 INSERT INTO state.pipeline_execution
@@ -103,28 +141,16 @@ class Client:
                 VALUES  (%s, %s, %s, %s, %s, %s, %s)
                 """
             params = (
-                pe.pipeline_id,
-                pe.state,
-                pe.started,
-                pe.ended,
-                pe.parallelism,
-                pe.retry_times,
-                pe.retry_policy,
+                pipeline_id,
+                state,
+                started,
+                ended,
+                parallelism,
+                retry_times,
+                retry_policy,
             )
             conn.execute(query, params)
             conn.commit()
-
-    def get_pipeline_execution(self, pipeline_id: int) -> PipelineExecution:
-        with psycopg.connect(self.client_context) as conn:
-            row_factory = conn.cursor(row_factory=class_row(PipelineExecution))
-            select_query = f"""
-                  SELECT *
-                      FROM state.pipeline_execution 
-                      WHERE pipeline_id = {pipeline_id} AND state in ('RUNNING')
-              """  # TODO select fields
-            print(select_query)
-            row = row_factory.execute(select_query).fetchone()
-            return row
 
     def update_pipeline_execution(self, pe: PipelineExecution):
         query = f"""
@@ -136,11 +162,17 @@ class Client:
               parallelism = {pe.parallelism},
               retry_times = {pe.retry_times},
               retry_policy = '{pe.retry_policy}'
-          WHERE execution_id = {pe.execution_id};
+          WHERE execution_id = {pe.execution_id} 
           """
         with psycopg.connect(self.client_context) as conn:
             conn.execute(query)
             conn.commit()
+
+    """
+    *****************************
+    ****** Task execution  ******
+    *****************************
+    """
 
     def create_task_execution(self, te: TaskExecution):
         with psycopg.connect(self.client_context) as conn:

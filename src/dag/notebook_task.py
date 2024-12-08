@@ -1,3 +1,4 @@
+from src.logger import logger
 import random
 import time
 from .task import Task, ExecutionState
@@ -16,7 +17,7 @@ class NotebookTask(Task):
         self.execution_config = execution_config
         self.depends_on = set()
         self.triggers = set()
-        self.execution_state = ExecutionState.RUNNING
+        self.state = ExecutionState.RUNNING
 
     def add_dependency(self, task: Task):
         self.depends_on.add(task)
@@ -31,24 +32,24 @@ class NotebookTask(Task):
         # else:
         #     duration = 1
         time.sleep(duration)
-        if random.randint(1, 2) > 2:
+        if random.randint(1, 3) > 2:
             raise Exception("Something failed")
-        print(f"Duration of {self.name} was {duration} sec")
+        logger.info(f"Duration of {self.name} was {duration} sec")
 
     @safe
     def run(self) -> ExecutionState:
         try:
-            print(f"Executing NotebookTask: {self.name}")
+            logger.info(f"Starting Execution Task: {self.name}")
             self._execution_mock()
-            self.execution_state = ExecutionState.SUCCESS
+            self.state = ExecutionState.SUCCESS
         except Exception as e:
-            print(f"Failed to execute NotebookTask: {self.name}")
-            self.execution_state = ExecutionState.FAILURE
+            logger.error(f"Failed to Execution Task: {self.name}")
+            self.state = ExecutionState.FAILURE
             raise e
-        return self.execution_state
+        return self.state
 
     def is_successful(self) -> bool:
-        return self.execution_state == ExecutionState.SUCCESS
+        return self.state == ExecutionState.SUCCESS
 
     def dependencies_ended(self) -> bool:
         return all(dep.is_successful() for dep in self.depends_on)

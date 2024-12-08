@@ -13,6 +13,9 @@ class ExecutionState(Enum):
     SUBMITTED = 3
     RUNNING = 4
 
+    def to_string(self):
+        return self.name
+
 
 """
 Abstract Base class for Tasks
@@ -25,6 +28,7 @@ class Task(Protocol):
     depends_on: set
     triggers: set
     name: str = ""
+    state: ExecutionState
 
     """
     Any task should execute something 
