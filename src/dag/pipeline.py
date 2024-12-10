@@ -270,6 +270,6 @@ class Pipeline:
         except Exception as e:
             logger.error(e)
             raise e
-        finally:
-            executor.shutdown(wait=True)
+        # finally:
+        #     executor.shutdown(wait=True)
         return failed_tasks

@@ -20,24 +20,50 @@ class Task(Protocol):
     depends_on: set = set()
     triggers: set = set()
 
-    # TODO ADD RENDER FUNCTION FOR HTML
-
     @abstractmethod
     def run(self) -> ExecutionState:
         pass
 
-    @abstractmethod
+    # TODO ADD RENDER FUNCTION FOR HTML
+
+    def add_dependency(self, task):
+        """
+
+        :param task:
+        :return:
+        """
+        self.depends_on.add(task)
+
+    def add_trigger(self, task):
+        """
+
+        :param task:
+        :return:
+        """
+        self.triggers.add(task)
+
     def is_successful(self) -> bool:
-        pass
+        return self.state == ExecutionState.SUCCESS
 
-    @abstractmethod
     def dependencies_ended(self) -> bool:
-        pass
+        return all(dep.is_successful() for dep in self.depends_on)
 
-    @abstractmethod
     def from_dataclass(self, t: TaskExecution):
-        pass
+        self.pipeline_id = t.pipeline_id
+        self.pipeline_execution_id = t.pipeline_execution_id
+        self.id = t.id
+        self.name = t.name
+        self.state = ExecutionState[t.state]
+        self.started = t.started
+        self.ended = t.ended
 
-    @abstractmethod
     def to_dataclass(self) -> TaskExecution:
-        pass
+        return TaskExecution(
+            pipeline_id=self.pipeline_id,
+            pipeline_execution_id=self.pipeline_execution_id,
+            id=self.id,
+            name=self.name,
+            state=self.state.to_string(),
+            started=self.started,
+            ended=self.ended,
+        )
