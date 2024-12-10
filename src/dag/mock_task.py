@@ -8,16 +8,9 @@ from returns.result import safe
 from src.state.data import TaskExecution
 
 
-class NotebookTask(Task):
-    def __init__(
-        self,
-        name: str,
-        execution_path: str = "",
-        execution_config: str = "",
-    ):
+class MockTask(Task):
+    def __init__(self, name: str):
         self.name = name
-        self.execution_path = execution_path
-        self.execution_config = execution_config
         self.id = None
         self.pipeline_id = None
         self.pipeline_execution_id = None
@@ -27,6 +20,7 @@ class NotebookTask(Task):
         self.depends_on = set()
         self.triggers = set()
 
+    # This could not be added in Task protocol as they require tasks
     def add_dependency(self, task: Task):
         self.depends_on.add(task)
 
@@ -34,9 +28,13 @@ class NotebookTask(Task):
         self.triggers.add(task)
 
     def _execution_mock(self):
+        """
+        delay for random ammount of time and produce errprs with a probability
+        :return:
+        """
         duration = random.randint(3, 5)
         time.sleep(duration)
-        if random.randint(1, 4) > 2:
+        if random.randint(1, 4) > 3:
             raise Exception("Something failed")
         logger.info(f"Duration of {self.name} was {duration} sec")
 
@@ -46,7 +44,6 @@ class NotebookTask(Task):
             self._execution_mock()
             self.state = ExecutionState.SUCCESS
         except Exception as e:
-            logger.error(f"Failed to Execution Task: {self.name}")
             self.state = ExecutionState.FAILURE
             raise e
         return self.state

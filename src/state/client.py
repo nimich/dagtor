@@ -2,7 +2,6 @@ import psycopg
 from psycopg.rows import class_row
 from .data import Pipeline, PipelineExecution, TaskExecution
 from typing import Optional
-from returns.maybe import Maybe
 from src.logger import logger
 from datetime import datetime
 
@@ -11,24 +10,6 @@ from datetime import datetime
 # register
 # get/update pipeline execution
 # get/update tasks execution
-
-
-def exists_running_task_execution(task: Maybe[TaskExecution]) -> bool:
-    """
-
-    :param task:
-    :return:
-    """
-    return task.bind_optional(lambda t: t.state == "RUNNING").value_or(False)
-
-
-def exists_running_pipeline_execution(pipeline: Maybe[PipelineExecution]) -> bool:
-    """
-
-    :param pipeline:
-    :return:
-    """
-    return pipeline.value_or(False)
 
 
 class Client:

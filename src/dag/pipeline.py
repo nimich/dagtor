@@ -5,7 +5,6 @@ from .task import Task
 from .execution_state import ExecutionState
 from src.state.client import Client
 from src.state.data import PipelineExecution
-from src.state.data import TaskExecution
 
 from datetime import datetime
 from src.logger import logger
@@ -30,7 +29,6 @@ class Pipeline:
         self.retry_max = retry_max
         self.retry_policy = retry_policy
 
-        # TODO no side effects in constructor
         self.pipeline_id = None
         self.execution_id = None
         self.retry_current = 0  # Current retry Number
@@ -40,6 +38,40 @@ class Pipeline:
 
         self.execution_failed_tasks: set[Task] = set()
         self.execution_running_tasks: set[Task] = set()
+
+        self.create_execution_dependencies()
+        self.validate_acyclic_graph()
+        self.validate_task_name_uniqueness()
+
+    def validate_task_name_uniqueness(self):
+        discovered_names = set()
+        for task in self.tasks:
+            if task.name in discovered_names:
+                raise Exception(f"Not unique task name: {task.name}")
+            discovered_names.add(task.name)
+
+    def validate_acyclic_graph(self):
+        def dfs(node, visited, recursion_stack):
+            if node in recursion_stack:
+                raise Exception(f"Cycle detected with node: {node.name}")
+
+            if node in visited:
+                return
+
+            visited.add(node)
+            recursion_stack.add(node)
+
+            for triggered_task in node.triggers:
+                dfs(triggered_task, visited, recursion_stack)
+
+            recursion_stack.remove(node)
+
+        visited = set()
+        recursion_stack = set()
+
+        for task in self.tasks:
+            if task not in visited:
+                dfs(task, visited, recursion_stack)
 
     def to_dataclass(self) -> PipelineExecution:
         return PipelineExecution(
@@ -101,7 +133,12 @@ class Pipeline:
                 for dependency in task.depends_on:
                     dependency.add_trigger(task)
 
-    def get_or_create_task_execution(self, task) -> TaskExecution:
+    def get_or_create_task_execution(self, task):
+        """
+        Get or creates state and in place updates task
+        :param task:
+        :return:
+        """
         task.pipeline_id = self.pipeline_id
         task.pipeline_execution_id = self.execution_id
 
@@ -141,9 +178,6 @@ class Pipeline:
         self.from_dataclass(pe)
 
         logger.info(f"Starting pipeline execution with {self.execution_id}")
-
-        # Create dependencies and execution list
-        self.create_execution_dependencies()
 
         # get failed tasks from state
         failed_tasks = self._execute_tasks_in_parallel(self.execution_running_tasks)
