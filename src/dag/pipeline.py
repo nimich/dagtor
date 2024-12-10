@@ -1,9 +1,11 @@
 from typing import List
 import concurrent.futures
 
-from .task import Task, ExecutionState
+from .task import Task
+from .execution_state import ExecutionState
 from src.state.client import Client
 from src.state.data import PipelineExecution
+from src.state.data import TaskExecution
 
 from datetime import datetime
 from src.logger import logger
@@ -54,7 +56,7 @@ class Pipeline:
     def from_dataclass(self, pe: PipelineExecution):
         self.pipeline_id = pe.pipeline_id
         self.execution_id = pe.execution_id
-        self.state = pe.state
+        self.state = ExecutionState[pe.state]
         self.started = pe.started
         self.ended = pe.ended
         self.parallelism = pe.parallelism
@@ -99,6 +101,39 @@ class Pipeline:
                 for dependency in task.depends_on:
                     dependency.add_trigger(task)
 
+    def get_or_create_task_execution(self, task) -> TaskExecution:
+        task.pipeline_id = self.pipeline_id
+        task.pipeline_execution_id = self.execution_id
+
+        te = self.client.get_task_execution_at_state(
+            pipeline_id=task.pipeline_id,
+            pipeline_execution_id=task.pipeline_execution_id,
+            task_name=task.name,
+            state="RUNNING",
+        )
+
+        if te is None:
+            self.client.create_task_execution(
+                pipeline_id=task.pipeline_id,
+                pipeline_execution_id=task.pipeline_execution_id,
+                name=task.name,
+                state="RUNNING",
+                started=datetime.now(),
+                ended=None,
+            )
+
+        te = self.client.get_task_execution_at_state(
+            pipeline_id=task.pipeline_id,
+            pipeline_execution_id=task.pipeline_execution_id,
+            task_name=task.name,
+            state="RUNNING",
+        )
+
+        task.from_dataclass(te)
+
+    def task_update_state(self, task: Task):
+        self.client.update_task_execution(task.to_dataclass())
+
     def execute_pipeline(self):
         # Register pipeline execution
         # Create or retrieve from state and update class fields
@@ -110,20 +145,15 @@ class Pipeline:
         # Create dependencies and execution list
         self.create_execution_dependencies()
 
-        # todo register tasks and get failed tasks from state
-        failed_tasks = self._execute_tasks_concurrently_with_trigger(
-            self.execution_running_tasks
-        )
+        # get failed tasks from state
+        failed_tasks = self._execute_tasks_in_parallel(self.execution_running_tasks)
 
         if failed_tasks:
             for retry_number in range(1, self.retry_max + 1):
                 self.retry_current = retry_number
-                logger.debug(
-                    f"*** Retrying pipeline: {retry_number} ***"
-                )  # Retry only failed tasks
-                failed_tasks = self._execute_tasks_concurrently_with_trigger(
-                    failed_tasks
-                )
+                logger.info(f"*** Retrying pipeline: Attempt {retry_number} ***")
+                # Retry only failed tasks
+                failed_tasks = self._execute_tasks_in_parallel(failed_tasks)
                 if not failed_tasks:
                     break
 
@@ -140,24 +170,27 @@ class Pipeline:
             self.client.update_pipeline_execution(self.to_dataclass())
             return False
 
-    def _execute_tasks_concurrently_with_trigger(
-        self, concurrent_tasks: set[Task]
-    ) -> set[Task]:
+    def _execute_tasks_in_parallel(self, concurrent_tasks: set[Task]) -> set[Task]:
         failed_tasks = set()
 
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.parallelism)
 
+        def run_with_state(task: Task):
+            # Wrap the task.run logic with additional behavior or state handling
+            logger.info(f"Triggering task: {task.name}")
+            self.get_or_create_task_execution(task)
+            result = task.run()  # Invoke the actual run method
+            logger.info(f"Task {task.name} finished with result: {result}")
+
         try:
             execution_futures = {
-                executor.submit(task.run): task
-                for task in concurrent_tasks
-                # TODO instead of run use run with state in order to handle state from this module
+                executor.submit(run_with_state, task): task for task in concurrent_tasks
             }
 
             while execution_futures:
                 for future in concurrent.futures.as_completed(execution_futures):
                     task = execution_futures.pop(future)
-                    logger.info(f"{task.name} ended with: {future.result()}")
+                    logger.info(f"{task.name} ended with: {task.state.name}")
 
                     completed_tasks = [
                         t.name
@@ -171,11 +204,14 @@ class Pipeline:
                     if not task.is_successful():  # todo inverse cases
                         failed_tasks.add(task)
                         task.execution_state = ExecutionState.FAILURE
-                        # todo update state
+                        task.ended = datetime.now()
+                        self.task_update_state(task)
                     else:
                         # At successful completion successful check if we can trigger another task
                         task.execution_state = ExecutionState.SUCCESS
-                        # todo update state
+                        task.ended = datetime.now()
+                        self.task_update_state(task)
+
                         triggers = task.triggers
                         for trigger in triggers:
                             if trigger not in self.execution_running_tasks:
@@ -184,9 +220,10 @@ class Pipeline:
                                     logger.debug(
                                         f"--Trigger task: {trigger.name} from {task.name}"
                                     )
-                                    execution_futures[executor.submit(trigger.run)] = (
-                                        trigger
-                                    )
+                                    # TODO check heree
+                                    execution_futures[
+                                        executor.submit(run_with_state, trigger)
+                                    ] = trigger
 
                     running_tasks = [
                         t.name
@@ -196,7 +233,9 @@ class Pipeline:
                     logger.debug(
                         f"Running tasks from execution list are: {running_tasks}"
                     )
-
+        except Exception as e:
+            logger.error(e)
+            raise e
         finally:
             executor.shutdown(wait=True)
-            return failed_tasks
+        return failed_tasks

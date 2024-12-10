@@ -1,40 +1,26 @@
-from enum import Enum
 from abc import abstractmethod
 from typing import Protocol
-
-
-"""
-"""
-
-
-class ExecutionState(Enum):
-    SUCCESS = 1
-    FAILURE = 2
-    SUBMITTED = 3
-    RUNNING = 4
-
-    def to_string(self):
-        return self.name
-
-
-"""
-Abstract Base class for Tasks
-"""
+from .execution_state import ExecutionState
+from src.state.data.pipeline import TaskExecution
+from datetime import datetime
 
 
 class Task(Protocol):
-    """ """
+    """
+    Protocol for tasks
+    """
 
-    depends_on: set
-    triggers: set
-    name: str = ""
+    id: int
+    name: str
+    pipeline_id: int
+    pipeline_execution_id: int
     state: ExecutionState
+    started: datetime
+    ended: datetime
+    depends_on: set = set()
+    triggers: set = set()
 
-    """
-    Any task should execute something 
-    """
-    # TODO ADD MEMEBERS
-    # TODO ADD RENDER FUNACTION FOR HTML
+    # TODO ADD RENDER FUNCTION FOR HTML
 
     @abstractmethod
     def run(self) -> ExecutionState:
@@ -46,4 +32,12 @@ class Task(Protocol):
 
     @abstractmethod
     def dependencies_ended(self) -> bool:
+        pass
+
+    @abstractmethod
+    def from_dataclass(self, t: TaskExecution):
+        pass
+
+    @abstractmethod
+    def to_dataclass(self) -> TaskExecution:
         pass
