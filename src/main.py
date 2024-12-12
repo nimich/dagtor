@@ -1,5 +1,4 @@
-from dag import Pipeline
-from dag.mock_task import MockTask
+from dag import Pipeline, MockTask
 from state.client import Client
 import sys
 
@@ -23,9 +22,13 @@ if __name__ == "__main__":
     task_4 = MockTask(name="task4")
     task_4.add_dependency(task_3)
 
-    execution_tasks = [task_1, task_2, task_3, task_4, task_0]
+    execution_tasks = [task_0, task_1, task_2, task_3, task_4]
+
     ingestion_pipeline = Pipeline(
-        name="ingestion", tasks=execution_tasks, state_client=Client()
+        name="databricks-ingestion",
+        tasks=execution_tasks,
+        state_client=Client(),
+        retry_max=5,
     )  # TODO validate in constructor: check for task name uniqueness and for cycles
 
     ingestion_pipeline.execute_pipeline()

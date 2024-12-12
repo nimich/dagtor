@@ -77,7 +77,7 @@ class Client:
             select_query = f"select id, name from state.pipeline WHERE name = '{name}'"
             row = row_factory.execute(select_query).fetchone()
             if row is None:
-                conn.execute("INSERT INTO state.pipeline (name) VALUES('ingestion')")
+                conn.execute(f"INSERT INTO state.pipeline (name) VALUES('{name}')")
                 conn.commit()
                 row = row_factory.execute(select_query).fetchone()
 

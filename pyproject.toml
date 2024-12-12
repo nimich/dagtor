@@ -26,9 +26,11 @@ classifiers = [
 ]
 
 dependencies = [
-  "returns",
-  "podman-compose",
-  "psycopg[binary,pool]"
+    "returns",
+    "podman-compose",
+    "psycopg[binary,pool]",
+    "databricks-sdk",
+    "urllib3<2.0"
 ] #Add dependencies here
 
 [project.optional-dependencies]
