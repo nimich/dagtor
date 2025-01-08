@@ -5,6 +5,7 @@ _version.py
 .DS_Store
 scrap/
 dist/
+main.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

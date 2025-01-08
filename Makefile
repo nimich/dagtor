@@ -16,5 +16,8 @@ down:
 	podman compose down
 	podman machine stop podman-machine-default
 
+build:
+	hatch build
+
 test:
 	python -m pytest dagtor/test/*
