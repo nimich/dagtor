@@ -3,6 +3,8 @@
 .idea/
 _version.py
 .DS_Store
+.scrap/
+.dist/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
