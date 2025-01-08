@@ -1,7 +1,3 @@
-[build-system]
-requires = ["hatchling","hatch-vcs"]
-build-backend = "hatchling.build"
-
 [project]
 name = "dagtor"
 dynamic = ["version"]
@@ -38,8 +34,7 @@ dev = [
     "returns",
     "pytest",
     "pytest-cov",
-    "pytest-mock",
-    "pre-commit",
+    "pytest-mock"
 ]
 
 [project.urls]
@@ -56,10 +51,14 @@ path = ".venv"
 python = "3.9" 
 description = "Custom env that is used for development"
 features = ["dev"]
-post-install-commands = ["pre-commit install"]
+#post-install-commands = ["pre-commit install"]
+
+[build-system]
+requires = ["hatchling","hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dagtor"]  # Point directly to the package
 
 [tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.hooks.vcs]
-version-file = "_version.py"
+path = "dagtor/_version.py"

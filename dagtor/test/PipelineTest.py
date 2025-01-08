@@ -3,8 +3,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.dag.pipeline import Pipeline
-from src.state.data import PipelineExecution
+from dagtor.dag.pipeline import Pipeline
+from dagtor.state.data import PipelineExecution
 
 
 @pytest.fixture()

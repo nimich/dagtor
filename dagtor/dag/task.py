@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Protocol
 from .execution_state import ExecutionState
-from src.state.data.pipeline import TaskExecution
+from dagtor.state.data.pipeline import TaskExecution
 from datetime import datetime
 
 

@@ -3,7 +3,7 @@ import time
 from databricks.sdk import WorkspaceClient
 from returns.result import safe
 
-from src.logger import logger
+from dagtor.logger import logger
 from .execution_state import ExecutionState
 from .task import Task
 
@@ -38,7 +38,7 @@ class DatabrickJobTask(Task):
                 time.sleep(4)
                 get_run_response = self.w.jobs.get_run(run_id=run_id)
                 lifecycle_state = get_run_response.state.life_cycle_state.name
-                logger.debug(f"Job state is {lifecycle_state}")
+                logger.debug(f"{self.name}: Job state is {lifecycle_state}")
 
             result_state = self.w.jobs.get_run(run_id=run_id).state.result_state.name
 

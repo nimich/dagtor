@@ -1,4 +1,4 @@
-from src.logger import logger
+from dagtor.logger import logger
 import random
 import time
 from .task import Task

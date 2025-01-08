@@ -2,7 +2,7 @@ import psycopg
 from psycopg.rows import class_row
 from .data import Pipeline, PipelineExecution, TaskExecution
 from typing import Optional
-from src.logger import logger
+from dagtor.logger import logger
 from datetime import datetime
 
 

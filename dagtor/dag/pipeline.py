@@ -3,11 +3,12 @@ import concurrent.futures
 
 from .task import Task
 from .execution_state import ExecutionState
-from src.state.client import Client
-from src.state.data import PipelineExecution
+from dagtor.state.client import Client
+from dagtor.state.client import Client
+from dagtor.state.data import PipelineExecution
 
 from datetime import datetime
-from src.logger import logger
+from dagtor.logger import logger
 
 
 class Pipeline:
@@ -15,16 +16,20 @@ class Pipeline:
         self,
         name: str,
         tasks: List[Task],
-        state_client: Client,
+        state_client_config: dict,
         parallelism: int = 10,
         retry_max: int = 5,
         retry_policy: str = "ONLY_FAILED",  # TODO ENUM
     ):
+
+        self.client = (
+            Client(state_client_config)
+            # TODO check if this should be class attribute like a sigleton
+            # TODO make this passed from outside https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+        )
+
         self.name = name
         self.tasks = tasks
-        self.client = (
-            state_client  # TODO check if this should be class attribute like a sigleton
-        )
         self.parallelism = parallelism
         self.retry_max = retry_max
         self.retry_policy = retry_policy
@@ -102,13 +107,13 @@ class Pipeline:
         get the existing pipeline state
         :return: return success if the pipeline is registered
         """
-        self.pipeline_id = client.get_or_create_pipeline(self.name)
+        self.pipeline_id = client.pipeline_manager.get_or_create_pipeline(self.name)
         logger.debug(f"Pipeline id is {self.pipeline_id}")
 
-        pe = client.get_running_pipeline_execution(self.pipeline_id)
+        pe = client.pipeline_execution_manager.get_running_pipeline_execution(self.pipeline_id)
 
         if pe is None:
-            client.create_pipeline_execution(
+            client.pipeline_execution_manager.create_pipeline_execution(
                 pipeline_id=self.pipeline_id,
                 state=ExecutionState.RUNNING.to_string(),
                 started=datetime.now(),
@@ -118,7 +123,7 @@ class Pipeline:
                 retry_policy=self.retry_policy,
             )
 
-        return client.get_running_pipeline_execution(self.pipeline_id)
+        return client.pipeline_execution_manager.get_running_pipeline_execution(self.pipeline_id)
 
     def create_execution_dependencies(self):
         """
@@ -141,8 +146,9 @@ class Pipeline:
         """
         task.pipeline_id = self.pipeline_id
         task.pipeline_execution_id = self.execution_id
+        task_manager = self.client.task_execution_manager
 
-        te = self.client.get_task_execution_at_state(
+        te = task_manager.get_task_execution_at_state(
             pipeline_id=task.pipeline_id,
             pipeline_execution_id=task.pipeline_execution_id,
             task_name=task.name,
@@ -150,7 +156,7 @@ class Pipeline:
         )
 
         if te is None:
-            self.client.create_task_execution(
+            task_manager.create_task_execution(
                 pipeline_id=task.pipeline_id,
                 pipeline_execution_id=task.pipeline_execution_id,
                 name=task.name,
@@ -159,7 +165,7 @@ class Pipeline:
                 ended=None,
             )
 
-        te = self.client.get_task_execution_at_state(
+        te = task_manager.get_task_execution_at_state(
             pipeline_id=task.pipeline_id,
             pipeline_execution_id=task.pipeline_execution_id,
             task_name=task.name,
@@ -169,7 +175,7 @@ class Pipeline:
         task.from_dataclass(te)
 
     def task_update_state(self, task: Task):
-        self.client.update_task_execution(task.to_dataclass())
+        self.client.task_execution_manager.update_task_execution(task.to_dataclass())
 
     def execute_pipeline(self):
         # Register pipeline execution
@@ -196,12 +202,12 @@ class Pipeline:
         if not failed_tasks:
             logger.info("Pipeline executed successfully!")
             self.state = ExecutionState.SUCCESS.name
-            self.client.update_pipeline_execution(self.to_dataclass())
+            self.client.pipeline_execution_manager.update_pipeline_execution(self.to_dataclass())
             return True
         else:
             logger.error(f"Pipeline failed: {failed_tasks}")
             self.state = ExecutionState.FAILURE.name
-            self.client.update_pipeline_execution(self.to_dataclass())
+            self.client.pipeline_execution_manager.update_pipeline_execution(self.to_dataclass())
             return False
 
     def _execute_tasks_in_parallel(self, concurrent_tasks: set[Task]) -> set[Task]:

@@ -6,7 +6,7 @@ dev:
 	hatch shell dev
 
 run:
-	hatch run dev python src/main.py
+	hatch run dev python dagtor/main.py
 
 up:
 	podman machine start podman-machine-default
@@ -17,4 +17,4 @@ down:
 	podman machine stop podman-machine-default
 
 test:
-	python -m pytest src/test/*
+	python -m pytest dagtor/test/*
