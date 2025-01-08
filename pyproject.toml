@@ -34,7 +34,8 @@ dev = [
     "returns",
     "pytest",
     "pytest-cov",
-    "pytest-mock"
+    "pytest-mock",
+    "pre-commit"
 ]
 
 [project.urls]
@@ -51,7 +52,7 @@ path = ".venv"
 python = "3.9" 
 description = "Custom env that is used for development"
 features = ["dev"]
-#post-install-commands = ["pre-commit install"]
+post-install-commands = ["pre-commit install"]
 
 [build-system]
 requires = ["hatchling","hatch-vcs"]
